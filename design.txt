@@ -71,6 +71,8 @@ moonstats.com
 						/address/buys
 						/address/sells
 
+/bridge
+    
 
 Analyzing player performance
     ***
