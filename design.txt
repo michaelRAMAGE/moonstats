@@ -1,0 +1,209 @@
+This is an overview design of the application. 
+Domain: Moonstats.com
+—----------------------------------------------------------------------------------------------------------------------------
+
+Clearly defined problem:
+	Build an API that can provide carnage statistics for interested carnage players. 
+    Build a front-end to present these statistics. 
+
+Stack
+	Front end: React
+	Back end: NodeJS + Express
+	Database: JSON data for now, but Mongo or some object db later
+
+I believe that the most important part is to build out an open-source API that contains many toolsets.
+Our API will be a way to filter the data and get what is needed. 
+For instance, the endpoint /carnage/games?player=Mr___Smite might return games that you played in and provide data related to those. 
+It is easy to render this for a page because all we have to do is call the API and get the already filtered data and render it into an appropriate structure. 
+This allows others to also build UIs around these filtered data sets. On top of this, they do not have to handle the logic to make sure that the data set is up to date and all that. 
+Scroll down to the bottom for the API design
+
+Explanation
+    We build our front-end user interface in React. All the components we will build will rely on a filtered version of our data. Any time we want to render a component, we fetch data from our Express Api; the Express Api filters data that it has access to; and the Express API returns it to the React component that fetched the data. 
+    Each route in our Express Api returns a filtered version of data that we store on the backend. 
+    In this approach, the React component makes a GET request to the Express API, which then filters the data on the backend and returns the filtered data to the component. 
+    The component then uses this data to render itself. This allows for dynamic filtering of data on the backend, 
+    rather than filtering the data on the client-side, which can be less efficient and less secure. 
+    Additionally, this approach also decouples the data handling and filtering logic from the component, allowing for better separation of concerns and making the code more maintainable.
+
+Pros
+		Avoid passing data around react components. When debugging, you have to follow where data flows, what is done on the data, and so on. 
+		React components will be easier to read, maintain, and have less complexity
+		Reusability of filtering logic for different UIs
+		Reusability for other applications (if the API is isolated)
+        We also do not have to implement logic to maintain consistency as we just make calls.
+Cons 
+        We fetch the same data multiple times 
+		Would caching defeat the purpose of not storing data on the front end?
+        When rendering react components, we make a get request to the Express API,  wait on the Express API to filter the data and return the filtered data to the component, then render the component. It may take longer to do the previous method than to read from a data store that is initialized with all the data at the beginning of the application and implements methods for filtering the data for components. 
+
+Questions about this design
+Q: How long does it take to make a successful GET request to our Express API? Would it be more efficient to make another module and create a data store that implements filtering methods, initialize it with all of the data, and then read from the data store when we need data in React components?
+A: It could be more efficient to use a data store that implements filtering methods and initializes it with all of the data. 
+This would reduce the number of requests to the server and the time required to obtain the filtered data. 
+This approach would keep all of the data on the client side, so it would eliminate the need for the client to wait for the server to filter the data and return it.
+However, it would also increase the amount of data that needs to be loaded and stored on the client side, which could affect the performance of the application, particularly if the data is large. Additionally, this approach would increase the client-side complexity and the data management overhead.
+It would also make the whole data more vulnerable to the client-side security risks, as all data would be available to the client, and it would be more challenging to control access to the data.
+In general, it depends on the size of the data, the complexity of the filtering requirements, and the security requirements of the application. It's best to weigh the pros and cons of each approach and choose the one that best fits the specific needs of your application.
+
+
+moonstats.com
+/carnage
+    /stats					     
+        /leaderboards?start={yyyy-mm-dd}&end={yyyy-mm-dd}&rss={}&method=simplesum
+            Returns a ready to present leaderboard that ranks players across each resource in terms of total acquired over the specified start to end interval
+        /leaderboards?start={yyyy-mm-dd}&end={yyyy-mm-dd}&rss={}&method=average
+            Returns a ready to present leaderboard that ranks players across each resource in terms of what they acquired on average over the specified start to end interval
+        /leaderboards?gameid={yyyy-mm-dd}
+            Returns a ready to present leaderboard that ranks players across each resource for the specified gameid
+
+				
+	/calculator
+        /rssvalue/gameid/playername : returns earnings for a specific game (i can use code i wrote from mooncraft.io perhaps)
+        /rssvalue/walletaddress : returns the value of resources in a particular wallet (donnieinu and hellsama does this)					
+			/pricing
+				/moonbeam
+				/moonriver
+				/sama
+				/ethereum 
+				/resources
+					/khaos?beta={true/false}&alpha={true/false}
+					/marketplace
+						/address/buys
+						/address/sells
+
+
+Analyzing player performance
+    ***
+    player 1
+        game 1 ... 
+            rss1,2,...
+            time played
+        game 2 ...
+            rss1,2,...
+            time played
+        game 3 ...
+            rss1,2,...
+            time played 
+        ...
+    player 2
+        ...
+    ...
+    ***
+
+    Method 1 
+        Use the following notation.
+        
+        Let Resources be a hashmap. The keys correspond to games. The values correspond to valid resource types tracked for a given game. Suppose "game1" is a key for Resources. Suppose that "game1" had the following valid resources types: gold, iron, stone, wood. Then Resources["game1"] = ["gold","iron","stone","wood"] and Resources = {"game1": ["gold","iron","stone","wood"]}.
+
+        Let Hist be a hashmap. 
+        The keys correspond to games. 
+        Suppose "gameX" is any arbitrary valid game. 
+        Suppose Resource["gameX"] = ["gold","iron","stone","wood"]. 
+        Then Hist["gameX"] = {"gold": a histogram for gold, "iron": a histogram for iron, "stone": a histogram for stone, "wood": a histogram for wood}.
+        In other words, the values of the Hashmap are histograms corresponding to each valid resource for a given game. 
+        These histograms have a horizontal axis representing the total amount of a resource that a player acquired.
+
+        In order to produce these histograms, we must do the following procedure: 
+        for game in games
+            for player in game
+                for resource in player.resources
+                    plot resource.count in Hist[game].resource
+
+                Look at the total amount of each resource that a player has in that game
+                    Lookup the percentile for the total amount of each resource the player acquired in that game
+
+        Something to note is that there may be a lot of people who get nothing in the end (give to someone else or just die). This will result in 
+        right-skewed histograms. In other words, there are more people that get fewer resources than people that get more. 
+        For instance, looking at 2023-01-29, here is histogram data: 
+
+            iron gathered (bins, horizontal access): [ 0. 89.45454545 178.90909091 268.36363636 357.81818182
+                                                    447.27272727 536.72727273 626.18181818 715.63636364 805.09090909 894.54545455 984.]
+            number of people in each category of iron gathered above (counts, vertical axis): [650. 164.  65.  28.  12.  11.   5.   3.   4.   1.   1.]
+
+        There are 944 people. 
+        650 people of those people got between 0 and 90 iron...that is 650/944 = .86 or 85% of players. 
+        On the other hand, 13% of people got between 90 and 1000 iron. 
+        I, Eyris, got 300 iron. This puts me in the 93rd percentile...in other words, 93% percent of all people got less iron than me; this can also be phrased as, I was in the top 7% of people for Iron. 
+
+
+    Method 2
+        Find the averages of the total resources gathered by players for each valid resource in a given game. 
+        For each game, we can then analyze player performance for each resource based on how far above or how far below average they are. 
+        We can then look combine these performances to create a more general metric.
+            The issue is that a full inventory of wood is not considered as good as a few stacks of iron, but why? 
+            Well, 
+                1) wood is easier to obtain, therefore will have a large supply, meaning that wood prices lower
+                2) ...which means that pvpers want to spend their time taking lunch money from iron and gold farmers
+            ...but we need to have a standard way of quantifying this understanding of rarity and hardness to obtain to 
+            understand "value" for creating weights for various resources. 
+
+            How do we weight this?
+                We are essentially asking, how do we quantifiably value these resources.
+                1) Supply ratios and price ratios between resources
+                    Let X be the total supply of a resource R1 and Y be the total supply of a resource R2. 
+                    Under this method, we derive weights based on X/Y.
+                    We can derive a price-based weighting as well, but price is not directly comparable to rarity. 
+                    It is interesting to note that the people have priced resources in accordance with the ratio of supplies between resources. 
+                    If we include this, the parameter can be `rssweightmethod=supply`
+
+                    There is an issue; the issue is that we can not use today's total supply to understand last week (the ratios tend to be the same but in a more general sense, it is not so clear that this can be proven).
+                    Therefore, we would derive ratios on a week by week basis; this also captures local difficulties in obtaining specific resources. 
+ 
+                    This is not perfect, but it is a way to derive an understanding of value in this context. 
+
+                    This post puts forth calculations of exchange rates between ingots per chunk: https://www.reddit.com/r/Minecraft/comments/1a8oeu/did_some_math_ingot_exchange_rate_based_on_rarity/, \
+                    but that does necessarily match the difficulty of obtaining the ingots in the context of a pvpve environment with multiple constraints. This is just here for a reference. 
+
+        
+                2) Let the users define the weight
+                    This allows for more flexibility. 
+                    Weighting method (1) just plugs its weights derived from supply into the weights that need to be used. 
+
+    
+
+        Concrete example
+            Let's assume that stone has a supply of 100,000; gold has a supply of 2,000, iron a supply of 6,000 (this is about the true ratio).
+            Let P1 and P2 denote players.
+
+            These players should rank equally, right?
+            P1
+                Game 1
+                    500 Gold
+                    1500 iron
+                    20k stone
+                Game 2
+                    500 Gold 
+                    1500 iron
+                    20k stone
+            P2
+                Game 1
+                    500 Gold
+                    1500 iron
+                    20k stone
+                Game 2
+                    500 Gold 
+                    1500 iron
+                    20k stone
+            P1 game1, game2 avg = 500, 1500, 20,000
+            P2 game1, game2 avg = 500, 1500, 20,000
+
+    Method 3 
+        We already have a leaderboards for each resource for each game, so we can derive some information from averaging ranks over time per resource category.
+        We still would have to produce weights for resources if we want to produce a combined performance metric.
+            Method 2 looks at ways we can derive weights for resources.  
+    
+    
+    The difference between Method 1 and Method 2 (as shown above)
+        Method 1 is more broad in that we are deriving stats from a distribution.
+            We can look at qualities like percentiles. 
+        Method 2 tries to think in terms of above and below an *average*.
+
+
+
+                
+
+
+
+
+    
