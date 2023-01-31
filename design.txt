@@ -13,10 +13,9 @@ Stack
 
 I believe that the most important part is to build out an open-source API that contains many toolsets.
 Our API will be a way to filter the data and get what is needed. 
-For instance, the endpoint /carnage/games?player=Mr___Smite might return games that you played in and provide data related to those. 
+For instance, if your name is jamesdean, the endpoint /carnage/games?player=jamesdean might return games that you played in and provide data related to those. 
 It is easy to render this for a page because all we have to do is call the API and get the already filtered data and render it into an appropriate structure. 
 This allows others to also build UIs around these filtered data sets. On top of this, they do not have to handle the logic to make sure that the data set is up to date and all that. 
-Scroll down to the bottom for the API design
 
 Explanation
     We build our front-end user interface in React. All the components we will build will rely on a filtered version of our data. Any time we want to render a component, we fetch data from our Express Api; the Express Api filters data that it has access to; and the Express API returns it to the React component that fetched the data. 
